@@ -18,6 +18,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+/**
+ * Centralized exception-to-response mapping.
+ * <p>
+ * HTTP status is set through {@link HttpServletResponse} to keep controllers free from
+ * {@code ResponseEntity}, while response body format stays consistent with {@link ApiResponse}.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -110,6 +116,9 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(ApiErrorCode.INTERNAL_SERVER_ERROR);
     }
 
+    /**
+     * Builds the standard BAD_REQUEST response with structured validation errors.
+     */
     private ApiResponse<ValidationErrorData> badRequest(
             HttpServletResponse response,
             List<ValidationErrorDetail> errors
@@ -135,6 +144,9 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Converts a property path like "create.arg0.symbol" into "symbol".
+     */
     private String extractFieldPath(String rawPath) {
         int lastDot = rawPath.lastIndexOf('.');
         return lastDot < 0 ? rawPath : rawPath.substring(lastDot + 1);

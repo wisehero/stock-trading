@@ -2,6 +2,9 @@ package com.wisehero.stocktrading.common.api;
 
 import org.springframework.http.HttpStatus;
 
+/**
+ * Standard error codes and mapped HTTP status values.
+ */
 public enum ApiErrorCode {
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "COMMON-400", "잘못된 요청입니다."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "COMMON-401", "인증이 필요합니다."),

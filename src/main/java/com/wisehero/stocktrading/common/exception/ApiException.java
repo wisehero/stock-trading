@@ -2,6 +2,9 @@ package com.wisehero.stocktrading.common.exception;
 
 import com.wisehero.stocktrading.common.api.ApiErrorCode;
 
+/**
+ * Domain/application exception that carries a stable API error code.
+ */
 public class ApiException extends RuntimeException {
 
     private final ApiErrorCode errorCode;
