@@ -30,7 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Broker Core의 핵심 서비스.
+ * 브로커 코어의 핵심 서비스.
  * 주문 생성/취소/조회, 선점, 체결 반영, 잔량 해제를 한 곳에서 조율한다.
  */
 @Service

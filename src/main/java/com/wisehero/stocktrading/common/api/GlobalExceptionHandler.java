@@ -117,7 +117,7 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(ApiErrorCode.INTERNAL_SERVER_ERROR);
     }
 
-    /** BAD_REQUEST + 유효성 상세 정보를 표준 포맷으로 구성한다. */
+    /** HTTP 400(BAD_REQUEST) + 유효성 상세 정보를 표준 포맷으로 구성한다. */
     private ApiResponse<ValidationErrorData> badRequest(
             HttpServletResponse response,
             List<ValidationErrorDetail> errors

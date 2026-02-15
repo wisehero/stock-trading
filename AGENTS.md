@@ -1,74 +1,74 @@
 # AGENTS.md
 
-## Scope
-- This file applies to the `stock-trading` project root and all subdirectories.
+## 적용 범위
+- 이 파일은 `stock-trading` 프로젝트 루트와 모든 하위 디렉터리에 적용됩니다.
 
-## Communication Rules
-- If any requirement is ambiguous, missing, or has multiple valid interpretations, ask a clarifying question before implementation.
-- Do not make silent assumptions for business rules, API contracts, or data model decisions.
-- Keep questions short and option-based when possible.
+## 커뮤니케이션 규칙
+- 요구사항이 모호하거나 누락되었거나 해석이 여러 개인 경우, 구현 전에 반드시 역질문합니다.
+- 비즈니스 규칙, API 계약, 데이터 모델 결정에서 임의 가정을 하지 않습니다.
+- 질문은 가능하면 짧고 선택지 기반으로 작성합니다.
 
-## Workflow
-- Follow this order by default:
-  1. Requirements clarification
-  2. Implementation plan
-  3. Implementation
-  4. Test
-  5. Review
+## 작업 흐름
+- 기본적으로 아래 순서를 따릅니다.
+  1. 요구사항 정리
+  2. 구현 계획 작성
+  3. 구현
+  4. 테스트
+  5. 리뷰
 
-## General Code Best Practices
-- Follow SOLID principles, especially SRP and DIP.
-- Prefer simple solutions first (KISS).
-- Do not add abstractions that are not currently needed (YAGNI).
-- Remove duplication where it improves maintainability (DRY), but avoid premature abstraction.
-- Use clear and intention-revealing names for classes, methods, variables, and constants.
-- Keep functions/methods focused on a single responsibility.
-- Minimize side effects; prefer immutable data and explicit state changes.
-- Handle errors explicitly; avoid silent failures.
-- Design for testability (dependency inversion, small units, clear boundaries).
-- Keep code style and formatting consistent across the project.
-- Write comments to explain *why*, not obvious *what*.
-- When behavior changes, update tests and related documentation together.
+## 일반 코드 베스트 프랙티스
+- SOLID 원칙을 준수하며, 특히 SRP와 DIP를 우선합니다.
+- 우선 단순한 해법(KISS)을 선택합니다.
+- 현재 필요하지 않은 추상화는 추가하지 않습니다(YAGNI).
+- 유지보수성 향상에 도움이 되는 범위에서 중복을 제거하되, 성급한 추상화는 피합니다(DRY).
+- 클래스, 메서드, 변수, 상수는 의도가 드러나는 이름으로 작성합니다.
+- 함수/메서드는 하나의 책임에 집중합니다.
+- 부수효과를 최소화하고, 상태 변경은 명시적으로 처리합니다.
+- 에러는 명시적으로 처리하고, 조용한 실패를 금지합니다.
+- 테스트 가능성을 고려해 설계합니다(의존성 역전, 작은 단위, 명확한 경계).
+- 프로젝트 전반에서 코드 스타일과 포맷 일관성을 유지합니다.
+- 주석은 자명한 what보다 의사결정의 why를 설명합니다.
+- 동작이 바뀌면 테스트와 관련 문서를 함께 갱신합니다.
 
-## API Rules
-- Standard response body format: `{ "code": "...", "message": "...", "data": ... }`
-- Do not use `ResponseEntity` for controller responses.
-- Keep HTTP status codes semantic (200/201/204 for success, 4xx/5xx for failure).
+## API 규칙
+- 표준 응답 바디 형식은 `{ "code": "...", "message": "...", "data": ... }`를 사용합니다.
+- 컨트롤러 응답에서 `ResponseEntity`를 사용하지 않습니다.
+- HTTP 상태코드는 의미에 맞게 사용합니다(성공: 200/201/204, 실패: 4xx/5xx).
 
-## Domain Rules
-- Use `BigDecimal` for money and quantity values that require precision.
-- Do not use `double` or `float` for business calculations.
-- Scale and rounding rules must be explicitly defined per domain/API requirement.
-- If scale/rounding is not specified, ask a clarifying question before implementation.
+## 도메인 규칙
+- 금액/수량처럼 정밀도가 필요한 값은 `BigDecimal`을 사용합니다.
+- 비즈니스 계산에 `double`, `float`를 사용하지 않습니다.
+- 스케일과 반올림 규칙은 도메인/API 요구사항에 맞게 명시합니다.
+- 스케일/반올림 규칙이 없으면 구현 전에 역질문합니다.
 
-## Time Rules
-- Store server-side and database timestamps in UTC by default.
-- Use ISO-8601 format for API date-time fields.
-- If a user-facing timezone is needed, use `Asia/Seoul` unless explicitly specified otherwise.
-- If timezone handling is unclear in requirements, ask a clarifying question before implementation.
+## 시간 규칙
+- 서버 및 DB 타임스탬프는 기본 UTC로 저장합니다.
+- API 날짜/시간 필드는 ISO-8601 형식을 사용합니다.
+- 사용자 노출 타임존이 필요할 때는 별도 지정이 없으면 `Asia/Seoul`을 사용합니다.
+- 타임존 처리 기준이 모호하면 구현 전에 역질문합니다.
 
-## API Versioning
-- All new REST endpoints should be exposed under `/api/v1`.
-- Backward-incompatible changes must be released in a new major API version (e.g. `/api/v2`).
-- Do not silently break existing API contracts.
+## API 버저닝
+- 신규 REST 엔드포인트는 `/api/v1` 하위로 노출합니다.
+- 하위 호환이 깨지는 변경은 새 메이저 버전(예: `/api/v2`)으로 배포합니다.
+- 기존 API 계약을 묵시적으로 깨뜨리지 않습니다.
 
-## Error Code Rules
-- Use domain-scoped string error codes.
-- Prefix policy:
-  - `COMMON-*`: cross-cutting/common errors
-  - `ORDER-*`: order domain errors
-  - `ACCOUNT-*`: account/balance domain errors
-- Error codes must remain stable once published.
+## 에러 코드 규칙
+- 도메인 스코프 기반 문자열 에러 코드를 사용합니다.
+- 접두어 정책:
+  - `COMMON-*`: 공통 에러
+  - `ORDER-*`: 주문 도메인 에러
+  - `ACCOUNT-*`: 계좌/잔고 도메인 에러
+- 공개된 에러 코드는 안정적으로 유지합니다.
 
-## Error Handling
-- Use centralized exception handling.
-- Use string-based error codes (example: `COMMON-400`, `COMMON-404`, `COMMON-500`).
+## 예외 처리
+- 전역 예외 처리 구조를 사용합니다.
+- 문자열 기반 에러 코드(예: `COMMON-400`, `COMMON-404`, `COMMON-500`)를 사용합니다.
 
-## Validation and Testing
-- Add or update tests for any behavior change.
-- Ensure `./gradlew test` passes before reporting completion.
-- Testing baseline:
-  - Domain/service logic: unit tests required
-  - Controller contract and validation/error response: web layer tests required
-  - Persistence/query behavior: integration tests required when repository logic changes
-- No behavior change should be merged without at least one corresponding automated test.
+## 검증 및 테스트
+- 동작 변경이 있으면 테스트를 추가하거나 갱신합니다.
+- 완료 보고 전 `./gradlew test` 통과를 확인합니다.
+- 테스트 기본 기준:
+  - 도메인/서비스 로직: 단위 테스트 필수
+  - 컨트롤러 계약 및 유효성/에러 응답: 웹 레이어 테스트 필수
+  - 영속성/조회 로직: 저장소 로직 변경 시 통합 테스트 필수
+- 최소 1개 이상의 자동화 테스트 없이 동작 변경을 머지하지 않습니다.

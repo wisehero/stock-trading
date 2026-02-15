@@ -12,7 +12,7 @@ import java.time.Instant;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
- * Mock Exchange가 생성한 체결(Fill) 기록.
+ * 내부 모의 거래소가 생성한 체결(Fill) 기록.
  */
 @Entity
 @Table(
