@@ -1,7 +1,8 @@
 package com.wisehero.stocktrading.common.api;
 
 /**
- * Standard success codes used by {@link ApiResponse}.
+ * 표준 성공 응답 코드.
+ * {@link ApiResponse}의 code/message 조합으로 사용한다.
  */
 public enum ApiSuccessCode {
     OK("COMMON-200", "요청이 성공했습니다."),

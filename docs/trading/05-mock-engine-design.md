@@ -1,27 +1,27 @@
-# Broker Core + Mock Exchange 설계 (1차)
+# 브로커 코어 + 내부 모의 거래소 설계 (1차)
 
 ## 목표
 - 외부 브로커/거래소 없이 주문-체결-후처리의 핵심 도메인 흐름을 검증한다.
-- Broker Core와 Mock Exchange 경계를 명확히 분리한다.
+- 브로커 코어와 내부 모의 거래소 경계를 명확히 분리한다.
 
 ## 아키텍처
-- Broker Core:
+- 브로커 코어:
   - 주문 API 수신
   - 사전체크(현금/수량)
   - 선점(hold)
   - 주문 상태 저장
-  - Mock Exchange 이벤트 반영
-- Mock Exchange Engine:
+  - 내부 모의 거래소 이벤트 반영
+- 내부 모의 매칭 엔진:
   - 주문 체결 가능 여부 판단
   - 부분체결/완전체결 계산
   - 체결 이벤트 생성
   - 시세 갱신 시 재매칭
 
 ## 컴포넌트 인터페이스
-- `OrderExecutionGateway` (Broker Core -> Exchange)
+- `OrderExecutionGateway` (브로커 코어 -> 모의 거래소)
   - `submit(Order order)`
   - `cancel(Order order)`
-- `ExecutionEventPublisher` (Exchange -> Broker Core)
+- `ExecutionEventPublisher` (모의 거래소 -> 브로커 코어)
   - `publishAccepted(...)`
   - `publishRejected(...)`
   - `publishPartiallyFilled(...)`
@@ -65,4 +65,4 @@
 ## 비기능
 - 1차는 단일 인스턴스 기준
 - 성능 목표보다 정합성을 우선
-- 운영 확장 시 Exchange를 외부 서비스로 분리 가능한 구조 유지
+- 운영 확장 시 모의 거래소를 외부 서비스로 분리 가능한 구조 유지

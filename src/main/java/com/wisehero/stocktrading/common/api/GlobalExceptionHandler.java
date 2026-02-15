@@ -19,10 +19,11 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
- * Centralized exception-to-response mapping.
+ * 전역 예외를 표준 응답으로 변환한다.
  * <p>
- * HTTP status is set through {@link HttpServletResponse} to keep controllers free from
- * {@code ResponseEntity}, while response body format stays consistent with {@link ApiResponse}.
+ * 컨트롤러에서 {@code ResponseEntity}를 사용하지 않기 위해
+ * {@link HttpServletResponse}로 HTTP 상태를 지정하고,
+ * 바디는 {@link ApiResponse} 형식을 유지한다.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -116,9 +117,7 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(ApiErrorCode.INTERNAL_SERVER_ERROR);
     }
 
-    /**
-     * Builds the standard BAD_REQUEST response with structured validation errors.
-     */
+    /** HTTP 400(BAD_REQUEST) + 유효성 상세 정보를 표준 포맷으로 구성한다. */
     private ApiResponse<ValidationErrorData> badRequest(
             HttpServletResponse response,
             List<ValidationErrorDetail> errors
@@ -144,9 +143,7 @@ public class GlobalExceptionHandler {
         );
     }
 
-    /**
-     * Converts a property path like "create.arg0.symbol" into "symbol".
-     */
+    /** "create.arg0.symbol" 같은 경로에서 마지막 필드명("symbol")만 추출한다. */
     private String extractFieldPath(String rawPath) {
         int lastDot = rawPath.lastIndexOf('.');
         return lastDot < 0 ? rawPath : rawPath.substring(lastDot + 1);
