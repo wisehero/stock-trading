@@ -7,6 +7,9 @@ import com.wisehero.stocktrading.account.domain.Position;
 import com.wisehero.stocktrading.account.domain.PositionId;
 import com.wisehero.stocktrading.account.repository.CashBalanceRepository;
 import com.wisehero.stocktrading.account.repository.PositionRepository;
+import com.wisehero.stocktrading.common.api.ApiErrorCode;
+import com.wisehero.stocktrading.common.exception.ApiException;
+import java.math.BigDecimal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +37,10 @@ public class MockAccountService {
 
     @Transactional
     public Position upsertPosition(Long accountId, String rawSymbol, MockPositionUpdateRequest request) {
+        if (!isWholeShareQuantity(request.availableQuantity())) {
+            throw new ApiException(ApiErrorCode.ORDER_INVALID_QUANTITY_UNIT);
+        }
+
         String symbol = normalizeSymbol(rawSymbol);
         PositionId positionId = new PositionId(accountId, symbol);
 
@@ -45,5 +52,9 @@ public class MockAccountService {
 
     private String normalizeSymbol(String symbol) {
         return symbol.trim().toUpperCase();
+    }
+
+    private boolean isWholeShareQuantity(BigDecimal quantity) {
+        return quantity.stripTrailingZeros().scale() <= 0;
     }
 }

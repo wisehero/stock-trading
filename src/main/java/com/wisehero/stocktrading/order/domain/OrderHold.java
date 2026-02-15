@@ -84,6 +84,23 @@ public class OrderHold {
         return remaining;
     }
 
+    public void release(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Released amount must be positive");
+        }
+        if (amount.compareTo(remainingAmount()) > 0) {
+            throw new IllegalArgumentException("Released amount cannot exceed remaining hold amount");
+        }
+        this.releasedAmount = this.releasedAmount.add(amount);
+    }
+
+    public void increaseTotal(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Increased amount must be positive");
+        }
+        this.totalAmount = this.totalAmount.add(amount);
+    }
+
     public BigDecimal remainingAmount() {
         return totalAmount.subtract(consumedAmount).subtract(releasedAmount);
     }

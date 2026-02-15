@@ -24,3 +24,8 @@ management:
 
 server:
   shutdown: graceful
+
+trading:
+  fee-rate: ${TRADING_FEE_RATE:0.00015}
+  day-expire-cron: ${TRADING_DAY_EXPIRE_CRON:0 40 15 * * MON-FRI}
+  market-time-zone: ${TRADING_MARKET_TIME_ZONE:Asia/Seoul}

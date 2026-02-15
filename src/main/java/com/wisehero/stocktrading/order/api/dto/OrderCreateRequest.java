@@ -1,6 +1,7 @@
 package com.wisehero.stocktrading.order.api.dto;
 
 import com.wisehero.stocktrading.order.domain.OrderSide;
+import com.wisehero.stocktrading.order.domain.OrderTif;
 import com.wisehero.stocktrading.order.domain.OrderType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -18,6 +19,7 @@ public record OrderCreateRequest(
         @NotBlank String symbol,
         @NotNull OrderSide side,
         @NotNull OrderType orderType,
+        OrderTif tif,
         @NotNull @DecimalMin("0.0001") @Digits(integer = 19, fraction = 4) BigDecimal quantity,
         @DecimalMin("0.0001") @Digits(integer = 19, fraction = 4) BigDecimal limitPrice
 ) {

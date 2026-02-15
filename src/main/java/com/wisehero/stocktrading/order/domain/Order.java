@@ -57,6 +57,10 @@ public class Order {
     @Column(name = "order_type", nullable = false, length = 10)
     private OrderType orderType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tif", nullable = false, length = 10)
+    private OrderTif tif;
+
     @Column(name = "limit_price", precision = 19, scale = 4)
     private BigDecimal limitPrice;
 
@@ -96,6 +100,7 @@ public class Order {
             String symbol,
             OrderSide side,
             OrderType orderType,
+            OrderTif tif,
             BigDecimal limitPrice,
             BigDecimal quantity
     ) {
@@ -105,6 +110,7 @@ public class Order {
         order.symbol = symbol;
         order.side = side;
         order.orderType = orderType;
+        order.tif = tif;
         order.limitPrice = limitPrice;
         order.quantity = quantity;
         order.filledQuantity = BigDecimal.ZERO;
@@ -166,6 +172,38 @@ public class Order {
         this.status = OrderStatus.CANCELED;
     }
 
+    public void markExpired() {
+        if (!status.isOpen()) {
+            throw new IllegalStateException("Order can be expired only while open");
+        }
+        this.status = OrderStatus.EXPIRED;
+    }
+
+    public void amendLimitOrder(BigDecimal amendedLimitPrice, BigDecimal amendedRemainingQuantity) {
+        if (!status.isOpen()) {
+            throw new IllegalStateException("Order can be amended only while open");
+        }
+        if (orderType != OrderType.LIMIT) {
+            throw new IllegalStateException("Only limit order can be amended");
+        }
+        if (amendedLimitPrice == null || amendedLimitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amended limit price must be positive");
+        }
+        if (amendedRemainingQuantity == null || amendedRemainingQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amended remaining quantity must be positive");
+        }
+        if (amendedRemainingQuantity.compareTo(this.remainingQuantity) > 0) {
+            throw new IllegalArgumentException("Amended remaining quantity cannot exceed current remaining quantity");
+        }
+
+        this.limitPrice = amendedLimitPrice;
+        this.remainingQuantity = amendedRemainingQuantity;
+        this.quantity = this.filledQuantity.add(amendedRemainingQuantity);
+        this.status = this.filledQuantity.compareTo(BigDecimal.ZERO) > 0
+                ? OrderStatus.PARTIALLY_FILLED
+                : OrderStatus.NEW;
+    }
+
     public boolean isOpen() {
         return status.isOpen();
     }
@@ -192,6 +230,10 @@ public class Order {
 
     public OrderType getOrderType() {
         return orderType;
+    }
+
+    public OrderTif getTif() {
+        return tif;
     }
 
     public BigDecimal getLimitPrice() {
