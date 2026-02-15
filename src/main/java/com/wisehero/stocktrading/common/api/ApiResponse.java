@@ -1,6 +1,7 @@
 package com.wisehero.stocktrading.common.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.Objects;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(String code, String message, T data) {
@@ -29,8 +30,9 @@ public record ApiResponse<T>(String code, String message, T data) {
         return new ApiResponse<>(errorCode.code(), errorCode.message(), data);
     }
 
-    public static ApiResponse<Void> error(String code, String message) {
-        return new ApiResponse<>(code, message, null);
+    public static ApiResponse<Void> error(ApiErrorCode errorCode, String message) {
+        String resolvedMessage = Objects.requireNonNullElse(message, errorCode.message());
+        return new ApiResponse<>(errorCode.code(), resolvedMessage, null);
     }
 
     private static <T> ApiResponse<T> success(ApiSuccessCode successCode, T data) {

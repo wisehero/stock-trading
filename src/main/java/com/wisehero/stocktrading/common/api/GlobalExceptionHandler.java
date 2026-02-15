@@ -6,7 +6,10 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Objects;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.validation.BindException;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -18,10 +21,16 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String DEFAULT_VALIDATION_MESSAGE = "유효하지 않은 값입니다.";
+    private static final String INVALID_TYPE_MESSAGE = "요청 값의 타입이 올바르지 않습니다.";
+    private static final String MISSING_PARAMETER_MESSAGE = "필수 요청 파라미터가 누락되었습니다.";
+
     @ExceptionHandler(ApiException.class)
     public ApiResponse<Void> handleApiException(ApiException exception, HttpServletResponse response) {
-        response.setStatus(exception.getErrorCode().status().value());
-        return ApiResponse.error(exception.getErrorCode().code(), exception.getMessage());
+        ApiErrorCode errorCode = exception.getErrorCode();
+        response.setStatus(errorCode.status().value());
+        return ApiResponse.error(errorCode, exception.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -29,34 +38,12 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException exception,
             HttpServletResponse response
     ) {
-        response.setStatus(ApiErrorCode.BAD_REQUEST.status().value());
-
-        List<ValidationErrorDetail> errors = exception.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(fieldError -> new ValidationErrorDetail(
-                        fieldError.getField(),
-                        Objects.requireNonNullElse(fieldError.getDefaultMessage(), "유효하지 않은 값입니다.")
-                ))
-                .toList();
-
-        return ApiResponse.error(ApiErrorCode.BAD_REQUEST, new ValidationErrorData(errors));
+        return badRequest(response, toFieldErrors(exception.getBindingResult()));
     }
 
     @ExceptionHandler(BindException.class)
     public ApiResponse<ValidationErrorData> handleBindException(BindException exception, HttpServletResponse response) {
-        response.setStatus(ApiErrorCode.BAD_REQUEST.status().value());
-
-        List<ValidationErrorDetail> errors = exception.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(fieldError -> new ValidationErrorDetail(
-                        fieldError.getField(),
-                        Objects.requireNonNullElse(fieldError.getDefaultMessage(), "유효하지 않은 값입니다.")
-                ))
-                .toList();
-
-        return ApiResponse.error(ApiErrorCode.BAD_REQUEST, new ValidationErrorData(errors));
+        return badRequest(response, toFieldErrors(exception.getBindingResult()));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -64,14 +51,12 @@ public class GlobalExceptionHandler {
             ConstraintViolationException exception,
             HttpServletResponse response
     ) {
-        response.setStatus(ApiErrorCode.BAD_REQUEST.status().value());
-
         List<ValidationErrorDetail> errors = exception.getConstraintViolations()
                 .stream()
                 .map(this::toValidationError)
                 .toList();
 
-        return ApiResponse.error(ApiErrorCode.BAD_REQUEST, new ValidationErrorData(errors));
+        return badRequest(response, errors);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
@@ -79,14 +64,12 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException exception,
             HttpServletResponse response
     ) {
-        response.setStatus(ApiErrorCode.BAD_REQUEST.status().value());
-
         ValidationErrorDetail error = new ValidationErrorDetail(
                 exception.getName(),
-                "요청 값의 타입이 올바르지 않습니다."
+                INVALID_TYPE_MESSAGE
         );
 
-        return ApiResponse.error(ApiErrorCode.BAD_REQUEST, new ValidationErrorData(List.of(error)));
+        return badRequest(response, List.of(error));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
@@ -94,14 +77,12 @@ public class GlobalExceptionHandler {
             MissingServletRequestParameterException exception,
             HttpServletResponse response
     ) {
-        response.setStatus(ApiErrorCode.BAD_REQUEST.status().value());
-
         ValidationErrorDetail error = new ValidationErrorDetail(
                 exception.getParameterName(),
-                "필수 요청 파라미터가 누락되었습니다."
+                MISSING_PARAMETER_MESSAGE
         );
 
-        return ApiResponse.error(ApiErrorCode.BAD_REQUEST, new ValidationErrorData(List.of(error)));
+        return badRequest(response, List.of(error));
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
@@ -124,14 +105,38 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleException(Exception exception, HttpServletResponse response) {
+        log.error("Unhandled exception occurred", exception);
         response.setStatus(ApiErrorCode.INTERNAL_SERVER_ERROR.status().value());
         return ApiResponse.error(ApiErrorCode.INTERNAL_SERVER_ERROR);
     }
 
+    private ApiResponse<ValidationErrorData> badRequest(
+            HttpServletResponse response,
+            List<ValidationErrorDetail> errors
+    ) {
+        response.setStatus(ApiErrorCode.BAD_REQUEST.status().value());
+        return ApiResponse.error(ApiErrorCode.BAD_REQUEST, new ValidationErrorData(errors));
+    }
+
+    private List<ValidationErrorDetail> toFieldErrors(BindingResult bindingResult) {
+        return bindingResult.getFieldErrors()
+                .stream()
+                .map(fieldError -> new ValidationErrorDetail(
+                        fieldError.getField(),
+                        Objects.requireNonNullElse(fieldError.getDefaultMessage(), DEFAULT_VALIDATION_MESSAGE)
+                ))
+                .toList();
+    }
+
     private ValidationErrorDetail toValidationError(ConstraintViolation<?> violation) {
         return new ValidationErrorDetail(
-                violation.getPropertyPath().toString(),
+                extractFieldPath(violation.getPropertyPath().toString()),
                 violation.getMessage()
         );
+    }
+
+    private String extractFieldPath(String rawPath) {
+        int lastDot = rawPath.lastIndexOf('.');
+        return lastDot < 0 ? rawPath : rawPath.substring(lastDot + 1);
     }
 }

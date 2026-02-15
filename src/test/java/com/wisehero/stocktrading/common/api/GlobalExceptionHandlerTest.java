@@ -84,4 +84,13 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.message").value("리소스를 찾을 수 없습니다."));
     }
 
+    @Test
+    void missingRequestParameterShouldReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/test/required-param"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON-400"))
+                .andExpect(jsonPath("$.message").value("잘못된 요청입니다."))
+                .andExpect(jsonPath("$.data.errors[0].field").value("symbol"));
+    }
+
 }
