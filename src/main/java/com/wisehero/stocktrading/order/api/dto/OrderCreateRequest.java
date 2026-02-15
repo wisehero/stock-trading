@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 
 /**
- * Order create request for general orders.
+ * 일반주문 생성 요청 DTO.
  */
 public record OrderCreateRequest(
         @NotNull @Positive Long accountId,

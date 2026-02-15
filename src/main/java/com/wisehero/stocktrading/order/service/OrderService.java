@@ -30,7 +30,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Broker Core service that owns order lifecycle, holds, and post-fill updates.
+ * Broker Core의 핵심 서비스.
+ * 주문 생성/취소/조회, 선점, 체결 반영, 잔량 해제를 한 곳에서 조율한다.
  */
 @Service
 public class OrderService {
@@ -69,6 +70,7 @@ public class OrderService {
         String symbol = normalizeSymbol(request.symbol());
         validateCreateRequest(request);
 
+        // 멱등키가 같으면 기존 주문을 그대로 반환해 중복 주문 생성을 막는다.
         Order existingOrder = orderRepository.findByAccountIdAndIdempotencyKey(request.accountId(), request.idempotencyKey())
                 .orElse(null);
         if (existingOrder != null) {
@@ -89,6 +91,7 @@ public class OrderService {
         OrderHold orderHold = reserveForOrder(order);
         orderHoldRepository.save(orderHold);
 
+        // 1차는 주문 저장 직후 즉시 모의체결을 시도한다.
         order.markAccepted();
         applyMatch(order, orderHold);
 
@@ -137,6 +140,7 @@ public class OrderService {
                 continue;
             }
 
+            // 시세 갱신 시점에 NEW/PARTIALLY_FILLED 주문만 다시 체결 시도한다.
             OrderHold hold = getOrderHoldOrThrow(order.getId());
             applyMatch(order, hold);
 
@@ -173,6 +177,7 @@ public class OrderService {
             applySellFill(order, hold, fillQuantity, fillPrice);
         }
 
+        // 완전체결되면 남아있는 선점분을 즉시 해제한다.
         if (!order.isOpen()) {
             releaseRemainingHold(order, hold);
         }
@@ -266,6 +271,7 @@ public class OrderService {
             return order.getLimitPrice();
         }
 
+        // 시장가 주문은 현재 고정 시세를 기준으로 선점 금액을 계산한다.
         MockQuote quote = mockQuoteRepository.findById(order.getSymbol())
                 .orElseThrow(() -> new ApiException(ApiErrorCode.QUOTE_NOT_FOUND));
         return quote.getPrice();

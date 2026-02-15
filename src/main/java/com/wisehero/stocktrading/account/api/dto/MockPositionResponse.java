@@ -4,7 +4,7 @@ import com.wisehero.stocktrading.account.domain.Position;
 import java.math.BigDecimal;
 
 /**
- * Mock position response.
+ * 모의 포지션 응답 DTO.
  */
 public record MockPositionResponse(
         Long accountId,

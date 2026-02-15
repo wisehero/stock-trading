@@ -10,7 +10,7 @@ import java.time.Instant;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * Fixed quote used by internal Mock Exchange.
+ * 내부 모의 매칭 엔진이 참조하는 고정 시세 엔티티.
  */
 @Entity
 @Table(name = "mock_quotes")

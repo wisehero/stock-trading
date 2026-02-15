@@ -4,58 +4,43 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.Objects;
 
 /**
- * Standard API response envelope.
- * <p>
- * Response shape: {@code {code, message, data}}.
+ * 표준 API 응답 래퍼.
+ * 응답 형식은 {@code {code, message, data}}로 고정한다.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(String code, String message, T data) {
 
-    /**
-     * Creates a success response with HTTP-200 semantic code.
-     */
+    /** HTTP 200 의미의 성공 응답을 생성한다. */
     public static <T> ApiResponse<T> ok(T data) {
         return success(ApiSuccessCode.OK, data);
     }
 
-    /**
-     * Creates a success response without payload.
-     */
+    /** 페이로드 없는 성공 응답을 생성한다. */
     public static ApiResponse<Void> ok() {
         return success(ApiSuccessCode.OK, null);
     }
 
-    /**
-     * Creates a success response with HTTP-201 semantic code.
-     */
+    /** HTTP 201 의미의 성공 응답을 생성한다. */
     public static <T> ApiResponse<T> created(T data) {
         return success(ApiSuccessCode.CREATED, data);
     }
 
-    /**
-     * Creates a success response with HTTP-204 semantic code.
-     */
+    /** HTTP 204 의미의 성공 응답을 생성한다. */
     public static ApiResponse<Void> noContent() {
         return success(ApiSuccessCode.NO_CONTENT, null);
     }
 
-    /**
-     * Creates an error response with default message from {@link ApiErrorCode}.
-     */
+    /** {@link ApiErrorCode}의 기본 메시지를 사용한 에러 응답을 생성한다. */
     public static ApiResponse<Void> error(ApiErrorCode errorCode) {
         return new ApiResponse<>(errorCode.code(), errorCode.message(), null);
     }
 
-    /**
-     * Creates an error response that includes structured error payload.
-     */
+    /** 상세 에러 데이터(data)를 포함한 에러 응답을 생성한다. */
     public static <T> ApiResponse<T> error(ApiErrorCode errorCode, T data) {
         return new ApiResponse<>(errorCode.code(), errorCode.message(), data);
     }
 
-    /**
-     * Creates an error response with an overridden message.
-     */
+    /** 기본 메시지를 덮어쓴 에러 응답을 생성한다. */
     public static ApiResponse<Void> error(ApiErrorCode errorCode, String message) {
         String resolvedMessage = Objects.requireNonNullElse(message, errorCode.message());
         return new ApiResponse<>(errorCode.code(), resolvedMessage, null);

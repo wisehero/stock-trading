@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Helper APIs for configuring mock accounts/positions during development and tests.
+ * 개발/테스트 시 모의 계좌와 포지션을 세팅하기 위한 API.
  */
 @RestController
 @Validated

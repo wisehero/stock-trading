@@ -10,7 +10,7 @@ import java.time.Instant;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * Account cash snapshot with hold tracking.
+ * 계좌 현금 잔고와 선점 금액을 함께 관리하는 엔티티.
  */
 @Entity
 @Table(name = "cash_balances")

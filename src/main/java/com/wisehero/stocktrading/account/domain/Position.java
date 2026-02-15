@@ -11,7 +11,7 @@ import java.time.Instant;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * Position snapshot with hold tracking for sell orders.
+ * 종목 보유수량/선점수량/평단을 관리하는 포지션 엔티티.
  */
 @Entity
 @Table(name = "positions")
@@ -80,6 +80,7 @@ public class Position {
         validatePositive(quantity);
         validatePositive(price);
 
+        // 매수 체결 시 가중평균 단가를 재계산한다.
         BigDecimal currentValue = averagePrice.multiply(availableQuantity);
         BigDecimal newValue = price.multiply(quantity);
         BigDecimal newTotalQuantity = availableQuantity.add(quantity);

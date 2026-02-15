@@ -18,7 +18,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * Aggregate root for order lifecycle and state transitions.
+ * 주문 라이프사이클과 상태 전이를 책임지는 주문 애그리거트 루트.
  */
 @Entity
 @Table(
@@ -143,6 +143,7 @@ public class Order {
         this.filledQuantity = this.filledQuantity.add(fillQuantity);
         this.remainingQuantity = this.remainingQuantity.subtract(fillQuantity);
 
+        // 잔량이 0이면 완전체결, 아니면 부분체결 상태로 전환한다.
         if (remainingQuantity.compareTo(BigDecimal.ZERO) == 0) {
             this.status = OrderStatus.FILLED;
             return;

@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Order detail response used by create/get/cancel APIs.
+ * 주문 단건 상세 응답 DTO.
  */
 public record OrderResponse(
         Long orderId,

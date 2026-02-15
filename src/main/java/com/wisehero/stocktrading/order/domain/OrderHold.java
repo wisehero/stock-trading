@@ -14,7 +14,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 /**
- * Reserved amount or quantity for an order.
+ * 주문 체결 전 선점(hold)된 현금/수량을 관리한다.
  */
 @Entity
 @Table(name = "order_holds")
@@ -76,6 +76,7 @@ public class OrderHold {
     }
 
     public BigDecimal releaseRemaining() {
+        // 취소/완전체결 시 남은 선점분을 한 번에 해제하기 위한 메서드.
         BigDecimal remaining = remainingAmount();
         if (remaining.compareTo(BigDecimal.ZERO) > 0) {
             this.releasedAmount = this.releasedAmount.add(remaining);

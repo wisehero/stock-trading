@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * End-to-end flow tests for Broker Core + Mock Exchange.
+ * Broker Core + Mock Exchange 주문 흐름 통합 테스트.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

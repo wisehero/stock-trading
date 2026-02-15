@@ -3,7 +3,7 @@ package com.wisehero.stocktrading.exchange.dto;
 import java.math.BigDecimal;
 
 /**
- * Matching outcome for a single order evaluation.
+ * 단일 주문에 대한 매칭 결과.
  */
 public record MatchResult(
         MatchType type,

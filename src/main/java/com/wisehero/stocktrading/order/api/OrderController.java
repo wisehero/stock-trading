@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Order APIs for general buy/sell flows.
+ * 일반주문(매수/매도) API 진입점.
  */
 @RestController
 @Validated

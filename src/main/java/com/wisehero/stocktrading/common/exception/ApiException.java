@@ -3,7 +3,7 @@ package com.wisehero.stocktrading.common.exception;
 import com.wisehero.stocktrading.common.api.ApiErrorCode;
 
 /**
- * Domain/application exception that carries a stable API error code.
+ * 안정적인 API 에러코드를 함께 전달하기 위한 애플리케이션 예외.
  */
 public class ApiException extends RuntimeException {
 

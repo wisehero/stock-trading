@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Mock quote APIs used for deterministic matching tests.
+ * 고정 시세를 관리하는 모의 시세 API.
  */
 @RestController
 @Validated

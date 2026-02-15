@@ -3,7 +3,8 @@ package com.wisehero.stocktrading.common.api;
 import org.springframework.http.HttpStatus;
 
 /**
- * Standard error codes and mapped HTTP status values.
+ * 표준 에러 코드와 HTTP 상태값 매핑.
+ * 컨트롤러/서비스에서는 이 코드를 기준으로 예외를 던진다.
  */
 public enum ApiErrorCode {
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "COMMON-400", "잘못된 요청입니다."),

@@ -13,7 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Internal fixed-quote matching engine used for the first release.
+ * 1차 릴리즈용 내부 모의 매칭 엔진.
+ * mock_quotes의 가격/가용수량으로 체결 여부를 판단한다.
  */
 @Component
 public class MockExchangeEngine implements OrderExecutionGateway {
@@ -53,7 +54,7 @@ public class MockExchangeEngine implements OrderExecutionGateway {
 
     @Override
     public void cancel(Order order) {
-        // No-op for internal mock exchange: cancellation is accepted immediately.
+        // 내부 모의 엔진에서는 취소 요청을 즉시 수락 처리한다.
     }
 
     private boolean isPriceConditionMatched(Order order, BigDecimal quotePrice) {

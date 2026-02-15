@@ -4,7 +4,7 @@ import com.wisehero.stocktrading.account.domain.CashBalance;
 import java.math.BigDecimal;
 
 /**
- * Mock cash response.
+ * 모의 계좌 현금 응답 DTO.
  */
 public record MockCashResponse(
         Long accountId,

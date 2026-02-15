@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * Fill response projection.
+ * 체결 내역 응답 DTO.
  */
 public record FillResponse(
         String executionId,

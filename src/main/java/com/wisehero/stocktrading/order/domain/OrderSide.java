@@ -1,7 +1,7 @@
 package com.wisehero.stocktrading.order.domain;
 
 /**
- * Buy or sell side of an order.
+ * 주문 방향(매수/매도).
  */
 public enum OrderSide {
     BUY,

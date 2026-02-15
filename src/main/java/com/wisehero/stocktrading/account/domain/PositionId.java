@@ -6,7 +6,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * Composite key for account position.
+ * 포지션의 복합키(accountId + symbol).
  */
 @Embeddable
 public class PositionId implements Serializable {

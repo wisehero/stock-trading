@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Mock quote management and rematching trigger service.
+ * 모의 시세를 갱신하고, 갱신 직후 미체결 주문 재매칭을 트리거한다.
  */
 @Service
 public class MockQuoteService {

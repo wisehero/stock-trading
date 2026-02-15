@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Utility service for setting deterministic mock account data.
+ * 테스트/개발용 모의 계좌 데이터를 설정하는 서비스.
  */
 @Service
 public class MockAccountService {

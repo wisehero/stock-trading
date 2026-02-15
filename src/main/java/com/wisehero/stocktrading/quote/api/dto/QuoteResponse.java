@@ -4,7 +4,7 @@ import com.wisehero.stocktrading.quote.domain.MockQuote;
 import java.math.BigDecimal;
 
 /**
- * Mock quote response.
+ * 모의 시세 응답 DTO.
  */
 public record QuoteResponse(
         String symbol,

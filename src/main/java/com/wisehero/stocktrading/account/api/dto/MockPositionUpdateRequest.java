@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 /**
- * Mock position update request.
+ * 모의 포지션 세팅 요청 DTO.
  */
 public record MockPositionUpdateRequest(
         @NotNull @DecimalMin("0.0000") @Digits(integer = 19, fraction = 4) BigDecimal availableQuantity,

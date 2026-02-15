@@ -1,7 +1,7 @@
 package com.wisehero.stocktrading.order.domain;
 
 /**
- * Order lifecycle states used by Broker Core.
+ * Broker Core에서 사용하는 주문 상태 전이 집합.
  */
 public enum OrderStatus {
     PENDING_NEW,

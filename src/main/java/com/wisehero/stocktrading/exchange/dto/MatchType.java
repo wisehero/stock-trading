@@ -1,7 +1,7 @@
 package com.wisehero.stocktrading.exchange.dto;
 
 /**
- * Result type returned by matching engine.
+ * 매칭 엔진이 반환하는 체결 결과 유형.
  */
 public enum MatchType {
     NO_FILL,

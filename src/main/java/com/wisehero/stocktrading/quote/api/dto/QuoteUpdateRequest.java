@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 /**
- * Mock quote upsert request.
+ * 모의 시세 등록/갱신 요청 DTO.
  */
 public record QuoteUpdateRequest(
         @NotNull @DecimalMin("0.0001") @Digits(integer = 19, fraction = 4) BigDecimal price,

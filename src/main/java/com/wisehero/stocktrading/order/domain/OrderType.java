@@ -1,7 +1,7 @@
 package com.wisehero.stocktrading.order.domain;
 
 /**
- * Supported order types for the first release.
+ * 1차 릴리즈에서 지원하는 주문 타입.
  */
 public enum OrderType {
     MARKET,
