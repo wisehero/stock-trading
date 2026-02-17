@@ -3,6 +3,7 @@ package com.wisehero.stocktrading.exchange;
 import com.wisehero.stocktrading.exchange.dto.MatchResult;
 import com.wisehero.stocktrading.order.domain.Order;
 import com.wisehero.stocktrading.order.domain.OrderSide;
+import com.wisehero.stocktrading.order.domain.OrderTif;
 import com.wisehero.stocktrading.order.domain.OrderType;
 import com.wisehero.stocktrading.quote.domain.MockQuote;
 import com.wisehero.stocktrading.quote.repository.MockQuoteRepository;
@@ -35,6 +36,10 @@ public class MockExchangeEngine implements OrderExecutionGateway {
 
         MockQuote quote = quoteOpt.get();
         if (!isPriceConditionMatched(order, quote.getPrice())) {
+            return MatchResult.noFill();
+        }
+
+        if (order.getTif() == OrderTif.FOK && quote.getAvailableQuantity().compareTo(order.getRemainingQuantity()) < 0) {
             return MatchResult.noFill();
         }
 

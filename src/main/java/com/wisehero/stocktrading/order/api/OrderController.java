@@ -1,6 +1,7 @@
 package com.wisehero.stocktrading.order.api;
 
 import com.wisehero.stocktrading.common.api.ApiResponse;
+import com.wisehero.stocktrading.order.api.dto.OrderAmendRequest;
 import com.wisehero.stocktrading.order.api.dto.OrderCancelRequest;
 import com.wisehero.stocktrading.order.api.dto.OrderCreateRequest;
 import com.wisehero.stocktrading.order.api.dto.OrderResponse;
@@ -11,6 +12,7 @@ import jakarta.validation.constraints.Positive;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -45,6 +47,14 @@ public class OrderController {
             @Valid @RequestBody OrderCancelRequest request
     ) {
         return ApiResponse.ok(orderService.cancelOrder(orderId, request.accountId()));
+    }
+
+    @PatchMapping("/{orderId}")
+    public ApiResponse<OrderResponse> amendOrder(
+            @PathVariable Long orderId,
+            @Valid @RequestBody OrderAmendRequest request
+    ) {
+        return ApiResponse.ok(orderService.amendOrder(orderId, request));
     }
 
     @GetMapping("/{orderId}")

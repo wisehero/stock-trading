@@ -4,6 +4,7 @@ import com.wisehero.stocktrading.order.domain.Fill;
 import com.wisehero.stocktrading.order.domain.Order;
 import com.wisehero.stocktrading.order.domain.OrderSide;
 import com.wisehero.stocktrading.order.domain.OrderStatus;
+import com.wisehero.stocktrading.order.domain.OrderTif;
 import com.wisehero.stocktrading.order.domain.OrderType;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -18,6 +19,7 @@ public record OrderResponse(
         String symbol,
         OrderSide side,
         OrderType orderType,
+        OrderTif tif,
         BigDecimal limitPrice,
         BigDecimal quantity,
         BigDecimal filledQuantity,
@@ -40,6 +42,7 @@ public record OrderResponse(
                 order.getSymbol(),
                 order.getSide(),
                 order.getOrderType(),
+                order.getTif(),
                 order.getLimitPrice(),
                 order.getQuantity(),
                 order.getFilledQuantity(),

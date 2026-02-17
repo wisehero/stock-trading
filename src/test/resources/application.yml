@@ -10,3 +10,9 @@ spring:
     open-in-view: false
   jackson:
     time-zone: Asia/Seoul
+  task:
+    scheduling:
+      enabled: false
+
+trading:
+  fee-rate: 0.00015

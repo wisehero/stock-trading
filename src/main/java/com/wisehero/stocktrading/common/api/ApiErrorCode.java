@@ -19,7 +19,13 @@ public enum ApiErrorCode {
     ORDER_LIMIT_PRICE_REQUIRED(HttpStatus.BAD_REQUEST, "ORDER-400", "지정가 주문은 가격이 필요합니다."),
     ORDER_LIMIT_PRICE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ORDER-401", "시장가 주문에는 가격을 지정할 수 없습니다."),
     ORDER_INVALID_QUANTITY(HttpStatus.BAD_REQUEST, "ORDER-402", "주문 수량은 0보다 커야 합니다."),
+    ORDER_INVALID_QUANTITY_UNIT(HttpStatus.BAD_REQUEST, "ORDER-411", "주문 수량은 1주 단위여야 합니다."),
+    ORDER_INVALID_TIF(HttpStatus.BAD_REQUEST, "ORDER-410", "주문 유형과 유효시간(TIF) 조합이 올바르지 않습니다."),
     ORDER_INVALID_STATUS(HttpStatus.CONFLICT, "ORDER-409", "현재 주문 상태에서는 요청을 처리할 수 없습니다."),
+    ORDER_AMEND_NOT_ALLOWED(HttpStatus.CONFLICT, "ORDER-412", "현재 주문은 정정할 수 없습니다."),
+    ORDER_AMEND_INVALID_REQUEST(HttpStatus.BAD_REQUEST, "ORDER-413", "유효하지 않은 정정 요청입니다."),
+    ORDER_AMEND_INVALID_QUANTITY(HttpStatus.BAD_REQUEST, "ORDER-414", "정정 수량은 현재 잔량 이하로만 줄일 수 있습니다."),
+    ORDER_AMEND_NO_CHANGE(HttpStatus.BAD_REQUEST, "ORDER-415", "정정 대상 값이 기존 주문과 동일합니다."),
 
     ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "ACCOUNT-404", "계좌를 찾을 수 없습니다."),
     ACCOUNT_POSITION_NOT_FOUND(HttpStatus.NOT_FOUND, "ACCOUNT-405", "보유 종목을 찾을 수 없습니다."),

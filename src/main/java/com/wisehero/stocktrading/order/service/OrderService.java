@@ -9,6 +9,7 @@ import com.wisehero.stocktrading.common.api.ApiErrorCode;
 import com.wisehero.stocktrading.common.exception.ApiException;
 import com.wisehero.stocktrading.exchange.OrderExecutionGateway;
 import com.wisehero.stocktrading.exchange.dto.MatchResult;
+import com.wisehero.stocktrading.order.api.dto.OrderAmendRequest;
 import com.wisehero.stocktrading.order.api.dto.OrderCreateRequest;
 import com.wisehero.stocktrading.order.api.dto.OrderResponse;
 import com.wisehero.stocktrading.order.domain.Fill;
@@ -17,6 +18,7 @@ import com.wisehero.stocktrading.order.domain.Order;
 import com.wisehero.stocktrading.order.domain.OrderHold;
 import com.wisehero.stocktrading.order.domain.OrderSide;
 import com.wisehero.stocktrading.order.domain.OrderStatus;
+import com.wisehero.stocktrading.order.domain.OrderTif;
 import com.wisehero.stocktrading.order.domain.OrderType;
 import com.wisehero.stocktrading.order.repository.FillRepository;
 import com.wisehero.stocktrading.order.repository.OrderHoldRepository;
@@ -24,20 +26,23 @@ import com.wisehero.stocktrading.order.repository.OrderRepository;
 import com.wisehero.stocktrading.quote.domain.MockQuote;
 import com.wisehero.stocktrading.quote.repository.MockQuoteRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 브로커 코어의 핵심 서비스.
- * 주문 생성/취소/조회, 선점, 체결 반영, 잔량 해제를 한 곳에서 조율한다.
+ * 주문 생성/취소/정정/조회, 선점, 체결 반영, 잔량 해제를 한 곳에서 조율한다.
  */
 @Service
 public class OrderService {
 
     private static final List<OrderStatus> REMATCHABLE_STATUSES = List.of(OrderStatus.NEW, OrderStatus.PARTIALLY_FILLED);
     private static final BigDecimal ZERO = BigDecimal.ZERO;
+    private static final int MONEY_SCALE = 4;
 
     private final OrderRepository orderRepository;
     private final OrderHoldRepository orderHoldRepository;
@@ -46,6 +51,7 @@ public class OrderService {
     private final CashBalanceRepository cashBalanceRepository;
     private final PositionRepository positionRepository;
     private final OrderExecutionGateway orderExecutionGateway;
+    private final BigDecimal feeRate;
 
     public OrderService(
             OrderRepository orderRepository,
@@ -54,7 +60,8 @@ public class OrderService {
             MockQuoteRepository mockQuoteRepository,
             CashBalanceRepository cashBalanceRepository,
             PositionRepository positionRepository,
-            OrderExecutionGateway orderExecutionGateway
+            OrderExecutionGateway orderExecutionGateway,
+            @Value("${trading.fee-rate:0.00015}") BigDecimal feeRate
     ) {
         this.orderRepository = orderRepository;
         this.orderHoldRepository = orderHoldRepository;
@@ -63,12 +70,14 @@ public class OrderService {
         this.cashBalanceRepository = cashBalanceRepository;
         this.positionRepository = positionRepository;
         this.orderExecutionGateway = orderExecutionGateway;
+        this.feeRate = feeRate == null || feeRate.compareTo(ZERO) < 0 ? ZERO : feeRate;
     }
 
     @Transactional
     public OrderResponse createOrder(OrderCreateRequest request) {
         String symbol = normalizeSymbol(request.symbol());
-        validateCreateRequest(request);
+        OrderTif tif = resolveTif(request.orderType(), request.tif());
+        validateCreateRequest(request, tif);
 
         // 멱등키가 같으면 기존 주문을 그대로 반환해 중복 주문 생성을 막는다.
         Order existingOrder = orderRepository.findByAccountIdAndIdempotencyKey(request.accountId(), request.idempotencyKey())
@@ -83,6 +92,7 @@ public class OrderService {
                 symbol,
                 request.side(),
                 request.orderType(),
+                tif,
                 request.limitPrice(),
                 request.quantity()
         );
@@ -91,12 +101,44 @@ public class OrderService {
         OrderHold orderHold = reserveForOrder(order);
         orderHoldRepository.save(orderHold);
 
-        // 1차는 주문 저장 직후 즉시 모의체결을 시도한다.
+        // 주문 저장 직후 즉시 모의체결을 시도한다.
         order.markAccepted();
         applyMatch(order, orderHold);
+        postProcessByTif(order, orderHold);
 
         orderRepository.save(order);
         orderHoldRepository.save(orderHold);
+
+        return toOrderResponse(order);
+    }
+
+    @Transactional
+    public OrderResponse amendOrder(Long orderId, OrderAmendRequest request) {
+        Order order = getOrderOrThrow(orderId, request.accountId());
+        validateAmendRequest(order, request);
+
+        OrderHold hold = getOrderHoldOrThrow(orderId);
+
+        BigDecimal amendedLimitPrice = request.amendedLimitPrice() == null
+                ? order.getLimitPrice()
+                : request.amendedLimitPrice();
+        BigDecimal amendedRemainingQuantity = request.amendedRemainingQuantity() == null
+                ? order.getRemainingQuantity()
+                : request.amendedRemainingQuantity();
+
+        if (isSameAmount(order.getLimitPrice(), amendedLimitPrice)
+                && isSameAmount(order.getRemainingQuantity(), amendedRemainingQuantity)) {
+            throw new ApiException(ApiErrorCode.ORDER_AMEND_NO_CHANGE);
+        }
+
+        adjustHoldForAmend(order, hold, amendedLimitPrice, amendedRemainingQuantity);
+        order.amendLimitOrder(amendedLimitPrice, amendedRemainingQuantity);
+
+        applyMatch(order, hold);
+        postProcessByTif(order, hold);
+
+        orderRepository.save(order);
+        orderHoldRepository.save(hold);
 
         return toOrderResponse(order);
     }
@@ -140,13 +182,43 @@ public class OrderService {
                 continue;
             }
 
-            // 시세 갱신 시점에 NEW/PARTIALLY_FILLED 주문만 다시 체결 시도한다.
+            // 시세 갱신 시점에 DAY + NEW/PARTIALLY_FILLED 주문만 다시 체결 시도한다.
+            if (order.getTif() != OrderTif.DAY) {
+                continue;
+            }
+
             OrderHold hold = getOrderHoldOrThrow(order.getId());
             applyMatch(order, hold);
+            postProcessByTif(order, hold);
 
             orderRepository.save(order);
             orderHoldRepository.save(hold);
         }
+    }
+
+    @Transactional
+    public int expireDayOrders() {
+        List<Order> dayOrders = orderRepository.findByTifAndStatusInOrderByCreatedAtAscIdAsc(
+                OrderTif.DAY,
+                REMATCHABLE_STATUSES
+        );
+
+        int expiredCount = 0;
+        for (Order order : dayOrders) {
+            if (!order.isOpen()) {
+                continue;
+            }
+
+            OrderHold hold = getOrderHoldOrThrow(order.getId());
+            order.markExpired();
+            releaseRemainingHold(order, hold);
+
+            orderRepository.save(order);
+            orderHoldRepository.save(hold);
+            expiredCount++;
+        }
+
+        return expiredCount;
     }
 
     private void applyMatch(Order order, OrderHold hold) {
@@ -157,6 +229,9 @@ public class OrderService {
 
         BigDecimal fillQuantity = matchResult.fillQuantity();
         BigDecimal fillPrice = matchResult.fillPrice();
+        BigDecimal notional = toMoney(fillPrice.multiply(fillQuantity));
+        BigDecimal feeAmount = calculateFee(notional);
+        BigDecimal taxAmount = ZERO.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
 
         order.applyFill(fillQuantity);
 
@@ -165,16 +240,16 @@ public class OrderService {
                 order.getId(),
                 fillPrice,
                 fillQuantity,
-                ZERO,
-                ZERO,
+                feeAmount,
+                taxAmount,
                 Instant.now()
         );
         fillRepository.save(fill);
 
         if (order.getSide() == OrderSide.BUY) {
-            applyBuyFill(order, hold, fillQuantity, fillPrice);
+            applyBuyFill(order, hold, fillQuantity, fillPrice, notional, feeAmount);
         } else {
-            applySellFill(order, hold, fillQuantity, fillPrice);
+            applySellFill(order, hold, fillQuantity, notional, feeAmount);
         }
 
         // 완전체결되면 남아있는 선점분을 즉시 해제한다.
@@ -183,13 +258,20 @@ public class OrderService {
         }
     }
 
-    private void applyBuyFill(Order order, OrderHold hold, BigDecimal fillQuantity, BigDecimal fillPrice) {
-        BigDecimal notional = fillPrice.multiply(fillQuantity);
+    private void applyBuyFill(
+            Order order,
+            OrderHold hold,
+            BigDecimal fillQuantity,
+            BigDecimal fillPrice,
+            BigDecimal notional,
+            BigDecimal feeAmount
+    ) {
+        BigDecimal settlementAmount = notional.add(feeAmount);
 
-        hold.consume(notional);
+        hold.consume(settlementAmount);
 
         CashBalance cashBalance = getCashBalanceOrThrow(order.getAccountId());
-        cashBalance.consumeHeld(notional);
+        cashBalance.consumeHeld(settlementAmount);
         cashBalanceRepository.save(cashBalance);
 
         PositionId positionId = new PositionId(order.getAccountId(), order.getSymbol());
@@ -199,18 +281,25 @@ public class OrderService {
         positionRepository.save(position);
     }
 
-    private void applySellFill(Order order, OrderHold hold, BigDecimal fillQuantity, BigDecimal fillPrice) {
-        BigDecimal notional = fillPrice.multiply(fillQuantity);
-
+    private void applySellFill(
+            Order order,
+            OrderHold hold,
+            BigDecimal fillQuantity,
+            BigDecimal notional,
+            BigDecimal feeAmount
+    ) {
         hold.consume(fillQuantity);
 
         Position position = getPositionOrThrow(order.getAccountId(), order.getSymbol());
         position.consumeHeld(fillQuantity);
         positionRepository.save(position);
 
-        CashBalance cashBalance = getCashBalanceOrThrow(order.getAccountId());
-        cashBalance.addAvailable(notional);
-        cashBalanceRepository.save(cashBalance);
+        BigDecimal settlementAmount = notional.subtract(feeAmount);
+        if (settlementAmount.compareTo(ZERO) > 0) {
+            CashBalance cashBalance = getCashBalanceOrThrow(order.getAccountId());
+            cashBalance.addAvailable(settlementAmount);
+            cashBalanceRepository.save(cashBalance);
+        }
     }
 
     private OrderHold reserveForOrder(Order order) {
@@ -222,8 +311,7 @@ public class OrderService {
     }
 
     private OrderHold reserveCashForBuyOrder(Order order) {
-        BigDecimal reservePrice = resolveReservePrice(order);
-        BigDecimal reserveAmount = reservePrice.multiply(order.getQuantity());
+        BigDecimal reserveAmount = calculateReserveAmount(resolveReservePrice(order), order.getQuantity());
 
         CashBalance cashBalance = getCashBalanceOrThrow(order.getAccountId());
         try {
@@ -246,6 +334,84 @@ public class OrderService {
         positionRepository.save(position);
 
         return OrderHold.create(order.getId(), order.getAccountId(), HoldType.QUANTITY, order.getQuantity());
+    }
+
+    private void adjustHoldForAmend(
+            Order order,
+            OrderHold hold,
+            BigDecimal amendedLimitPrice,
+            BigDecimal amendedRemainingQuantity
+    ) {
+        if (order.getSide() == OrderSide.SELL) {
+            adjustSellHoldForAmend(order, hold, amendedRemainingQuantity);
+            return;
+        }
+
+        adjustBuyHoldForAmend(order, hold, amendedLimitPrice, amendedRemainingQuantity);
+    }
+
+    private void adjustSellHoldForAmend(Order order, OrderHold hold, BigDecimal amendedRemainingQuantity) {
+        BigDecimal currentRemainingHold = hold.remainingAmount();
+        if (amendedRemainingQuantity.compareTo(currentRemainingHold) > 0) {
+            throw new ApiException(ApiErrorCode.ORDER_AMEND_INVALID_QUANTITY);
+        }
+
+        BigDecimal releaseQuantity = currentRemainingHold.subtract(amendedRemainingQuantity);
+        if (releaseQuantity.compareTo(ZERO) <= 0) {
+            return;
+        }
+
+        hold.release(releaseQuantity);
+
+        Position position = getPositionOrThrow(order.getAccountId(), order.getSymbol());
+        position.releaseHeld(releaseQuantity);
+        positionRepository.save(position);
+    }
+
+    private void adjustBuyHoldForAmend(
+            Order order,
+            OrderHold hold,
+            BigDecimal amendedLimitPrice,
+            BigDecimal amendedRemainingQuantity
+    ) {
+        BigDecimal currentRemainingHold = hold.remainingAmount();
+        BigDecimal targetRemainingHold = calculateReserveAmount(amendedLimitPrice, amendedRemainingQuantity);
+        int compared = targetRemainingHold.compareTo(currentRemainingHold);
+
+        if (compared == 0) {
+            return;
+        }
+
+        CashBalance cashBalance = getCashBalanceOrThrow(order.getAccountId());
+        if (compared > 0) {
+            BigDecimal additionalHold = targetRemainingHold.subtract(currentRemainingHold);
+            try {
+                cashBalance.hold(additionalHold);
+            } catch (IllegalStateException exception) {
+                throw new ApiException(ApiErrorCode.ACCOUNT_INSUFFICIENT_CASH);
+            }
+            hold.increaseTotal(additionalHold);
+            cashBalanceRepository.save(cashBalance);
+            return;
+        }
+
+        BigDecimal releaseAmount = currentRemainingHold.subtract(targetRemainingHold);
+        hold.release(releaseAmount);
+        cashBalance.releaseHeld(releaseAmount);
+        cashBalanceRepository.save(cashBalance);
+    }
+
+    private void postProcessByTif(Order order, OrderHold hold) {
+        if (!order.isOpen()) {
+            return;
+        }
+
+        if (order.getTif() == OrderTif.DAY) {
+            return;
+        }
+
+        order.markCanceled();
+        releaseRemainingHold(order, hold);
     }
 
     private void releaseRemainingHold(Order order, OrderHold hold) {
@@ -277,6 +443,23 @@ public class OrderService {
         return quote.getPrice();
     }
 
+    private BigDecimal calculateReserveAmount(BigDecimal reservePrice, BigDecimal quantity) {
+        BigDecimal reserveNotional = toMoney(reservePrice.multiply(quantity));
+        BigDecimal reserveFee = calculateFee(reserveNotional);
+        return reserveNotional.add(reserveFee);
+    }
+
+    private BigDecimal calculateFee(BigDecimal notional) {
+        if (feeRate.compareTo(ZERO) <= 0 || notional.compareTo(ZERO) <= 0) {
+            return ZERO.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+        }
+        return toMoney(notional.multiply(feeRate));
+    }
+
+    private BigDecimal toMoney(BigDecimal value) {
+        return value.setScale(MONEY_SCALE, RoundingMode.HALF_UP);
+    }
+
     private Order getOrderOrThrow(Long orderId, Long accountId) {
         return orderRepository.findByIdAndAccountId(orderId, accountId)
                 .orElseThrow(() -> new ApiException(ApiErrorCode.ORDER_NOT_FOUND));
@@ -297,9 +480,12 @@ public class OrderService {
                 .orElseThrow(() -> new ApiException(ApiErrorCode.ACCOUNT_POSITION_NOT_FOUND));
     }
 
-    private void validateCreateRequest(OrderCreateRequest request) {
-        if (request.quantity().compareTo(BigDecimal.ZERO) <= 0) {
+    private void validateCreateRequest(OrderCreateRequest request, OrderTif tif) {
+        if (request.quantity().compareTo(ZERO) <= 0) {
             throw new ApiException(ApiErrorCode.ORDER_INVALID_QUANTITY);
+        }
+        if (!isWholeShareQuantity(request.quantity())) {
+            throw new ApiException(ApiErrorCode.ORDER_INVALID_QUANTITY_UNIT);
         }
 
         if (request.orderType() == OrderType.LIMIT && request.limitPrice() == null) {
@@ -309,6 +495,62 @@ public class OrderService {
         if (request.orderType() == OrderType.MARKET && request.limitPrice() != null) {
             throw new ApiException(ApiErrorCode.ORDER_LIMIT_PRICE_NOT_ALLOWED);
         }
+
+        if (request.orderType() == OrderType.MARKET && tif != OrderTif.IOC) {
+            throw new ApiException(ApiErrorCode.ORDER_INVALID_TIF);
+        }
+    }
+
+    private void validateAmendRequest(Order order, OrderAmendRequest request) {
+        if (!order.isOpen()) {
+            throw new ApiException(ApiErrorCode.ORDER_INVALID_STATUS);
+        }
+        if (order.getOrderType() != OrderType.LIMIT) {
+            throw new ApiException(ApiErrorCode.ORDER_AMEND_NOT_ALLOWED);
+        }
+        if (request.amendedLimitPrice() == null && request.amendedRemainingQuantity() == null) {
+            throw new ApiException(ApiErrorCode.ORDER_AMEND_INVALID_REQUEST);
+        }
+
+        if (request.amendedLimitPrice() != null && request.amendedLimitPrice().compareTo(ZERO) <= 0) {
+            throw new ApiException(ApiErrorCode.ORDER_AMEND_INVALID_REQUEST);
+        }
+
+        if (request.amendedRemainingQuantity() == null) {
+            return;
+        }
+
+        if (request.amendedRemainingQuantity().compareTo(ZERO) <= 0) {
+            throw new ApiException(ApiErrorCode.ORDER_AMEND_INVALID_QUANTITY);
+        }
+        if (!isWholeShareQuantity(request.amendedRemainingQuantity())) {
+            throw new ApiException(ApiErrorCode.ORDER_INVALID_QUANTITY_UNIT);
+        }
+        if (request.amendedRemainingQuantity().compareTo(order.getRemainingQuantity()) > 0) {
+            throw new ApiException(ApiErrorCode.ORDER_AMEND_INVALID_QUANTITY);
+        }
+    }
+
+    private OrderTif resolveTif(OrderType orderType, OrderTif requestedTif) {
+        if (orderType == OrderType.MARKET) {
+            if (requestedTif == null) {
+                return OrderTif.IOC;
+            }
+            if (requestedTif != OrderTif.IOC) {
+                throw new ApiException(ApiErrorCode.ORDER_INVALID_TIF);
+            }
+            return OrderTif.IOC;
+        }
+
+        return requestedTif == null ? OrderTif.DAY : requestedTif;
+    }
+
+    private boolean isWholeShareQuantity(BigDecimal quantity) {
+        return quantity.stripTrailingZeros().scale() <= 0;
+    }
+
+    private boolean isSameAmount(BigDecimal left, BigDecimal right) {
+        return left.compareTo(right) == 0;
     }
 
     private String normalizeSymbol(String symbol) {

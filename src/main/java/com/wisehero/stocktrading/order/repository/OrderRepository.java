@@ -2,6 +2,7 @@ package com.wisehero.stocktrading.order.repository;
 
 import com.wisehero.stocktrading.order.domain.Order;
 import com.wisehero.stocktrading.order.domain.OrderStatus;
+import com.wisehero.stocktrading.order.domain.OrderTif;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -14,4 +15,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByIdAndAccountId(Long id, Long accountId);
 
     List<Order> findBySymbolAndStatusInOrderByCreatedAtAscIdAsc(String symbol, Collection<OrderStatus> statuses);
+
+    List<Order> findByTifAndStatusInOrderByCreatedAtAscIdAsc(OrderTif tif, Collection<OrderStatus> statuses);
 }

@@ -42,6 +42,13 @@ public class MockQuoteService {
         if (request.price().compareTo(BigDecimal.ZERO) <= 0 || request.availableQuantity().compareTo(BigDecimal.ZERO) < 0) {
             throw new ApiException(ApiErrorCode.QUOTE_INVALID_VALUE);
         }
+        if (!isWholeShareQuantity(request.availableQuantity())) {
+            throw new ApiException(ApiErrorCode.QUOTE_INVALID_VALUE);
+        }
+    }
+
+    private boolean isWholeShareQuantity(BigDecimal quantity) {
+        return quantity.stripTrailingZeros().scale() <= 0;
     }
 
     private String normalizeSymbol(String symbol) {
