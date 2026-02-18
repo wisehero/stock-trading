@@ -10,4 +10,5 @@
 - `05-mock-engine-design.md`: 브로커 코어 + 내부 모의 거래소 분리 설계
 - `06-phase2-requirement-lock.md`: 2차 기능(정정주문/TIF/수수료·세금) 확정본
 - `07-phase2-implementation-plan.md`: 2차 구현 상세 계획
-- `08-phase3-requirement-lock.md`: 3차 기능(상태/이벤트/장애대응) 확정 초안
+- `08-phase3-requirement-lock.md`: 3차 기능(상태/이벤트/장애대응) 확정본
+- `09-phase3-implementation-plan.md`: 3차 구현 상세 계획
